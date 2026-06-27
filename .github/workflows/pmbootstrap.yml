@@ -20,7 +20,8 @@ jobs:
 
     - name: Clone and Install pmbootstrap from Source
       run: |
-        git clone https://gitlab.com/postmarketOS/pmbootstrap.git
+        # Yeni resmi Git altyapısından klonluyoruz
+        git clone https://gitlab.postmarketos.org/postmarketOS/pmbootstrap.git
         cd pmbootstrap
         sudo ln -s "$(pwd)/pmbootstrap.py" /usr/local/bin/pmbootstrap
         chmod +x pmbootstrap.py
