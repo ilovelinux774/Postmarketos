@@ -71,13 +71,11 @@ jobs:
 
     - name: Initialize pmbootstrap (Sonsuz Enter Yöntemi)
       run: |
-        # yes "" komutu pmbootstrap init sihirbazındaki tüm sorulara boş enter basarak otomatik geçer
         yes "" | pmbootstrap init
 
     - name: Configure pmbootstrap Targets via CLI
       run: |
-        # Otomatik oluşan güncel formattaki config dosyasını resmi komutlarla düzenliyoruz
-        pmbootstrap config channel edge
+        # Geçersiz olan 'channel' satırını sildik, sadece listedeki geçerli seçenekleri yapılandırıyoruz
         pmbootstrap config device samsung-kylepro
         pmbootstrap config ui xfce4
 
