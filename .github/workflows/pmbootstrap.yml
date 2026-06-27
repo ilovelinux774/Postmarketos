@@ -1,4 +1,4 @@
-name: Build postmarketOS Image
+name: Build postmarketOS Image for GT-S7580
 
 on:
   push:
@@ -25,14 +25,26 @@ jobs:
         sudo ln -s "$(pwd)/pmbootstrap.py" /usr/local/bin/pmbootstrap
         chmod +x pmbootstrap.py
 
-    - name: Setup pmbootstrap Configuration File Directly
+    - name: Pre-clone pmaports Infrastructure
       run: |
-        # init komutunun hata vermesini önlemek için config dosyasını manuel oluşturuyoruz
+        # init komutunun kilitlenmesini engellemek için pmaports'u doğrudan kendimiz çekiyoruz
+        mkdir -p /home/runner/.local/var/pmbootstrap/cache_git
+        git clone --depth=1 https://gitlab.postmarketos.org/postmarketOS/pmaports.git /home/runner/.local/var/pmbootstrap/cache_git/pmaports
+
+    - name: Clone Custom GT-S7580 (kylepro) Device Tree
+      run: |
+        # Klasör isimlerini pmbootstrap'in tanıyacağı paket adlarına (ön eksiz) çeviriyoruz
+        cd /home/runner/.local/var/pmbootstrap/cache_git/pmaports/device/testing
+        git clone https://github.com/themarcominetti/device-samsung-kylepro.git samsung-kylepro
+        git clone https://github.com/themarcominetti/linux-samsung-kylepro.git linux-samsung-kylepro
+
+    - name: Setup pmbootstrap Configuration File
+      run: |
         mkdir -p ~/.config
         cat <<EOF > ~/.config/pmbootstrap.cfg
         [pmbootstrap]
         version = 3
-        work = /tmp/pmbootstrap-work
+        work = /home/runner/.local/var/pmbootstrap
         jobs = 4
         ccache_size = 5G
         is_default_channel = False
@@ -44,7 +56,7 @@ jobs:
         [config]
         channel = edge
         arch = armv7
-        device = samsung-j4plus
+        device = samsung-kylepro
         ui = xfce4
         user = pmos
         extra_packages = none
@@ -52,9 +64,9 @@ jobs:
         keymaps = none
         EOF
 
-    - name: Zap and Pull pmaports
+    - name: Update pmaports Index
       run: |
-        # Konfigürasyon hazır olduğu için doğrudan depoları güncelleyebiliriz
+        # Yeni eklediğimiz cihaz paketlerini pmbootstrap'e indeksletiyoruz
         pmbootstrap update
 
     - name: Build Flashable Image
@@ -65,6 +77,6 @@ jobs:
     - name: Upload Build Artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: pmOS-samsung-j4plus
-        path: /tmp/pmbootstrap-work/chroot_native/tmp/postmarketOS-export/*
+        name: pmOS-GT-S7580
+        path: /home/runner/.local/var/pmbootstrap/chroot_native/tmp/postmarketOS-export/*
  
