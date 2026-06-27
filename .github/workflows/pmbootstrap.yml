@@ -52,7 +52,8 @@ jobs:
 
         cat <<EOF > "$CHROOT_DEVICE_DIR/APKBUILD"
         # Maintainer: Custom Build
-        pkgname=device-samsung-kylepro
+        # Klasör adıyla uyuşması için pkgname değerini düzelttik
+        pkgname=samsung-kylepro
         pkgver=1
         pkgrel=0
         pkgdesc="Samsung Galaxy Trend Plus config"
@@ -76,7 +77,7 @@ jobs:
     - name: Configure pmbootstrap Targets via CLI
       run: |
         pmbootstrap config device samsung-kylepro
-        pmbootstrap config ui xfce4
+        pmbootstrap config ui xfce4 
 
     - name: Update pmaports Index
       run: |
@@ -84,7 +85,6 @@ jobs:
 
     - name: Build Flashable Image
       run: |
-        # Senin dediğin gibi echo kullanarak kullanıcı şifresini (1234) otomatik besliyoruz
         echo -e "1234\n1234" | pmbootstrap install
         pmbootstrap export
 
@@ -93,3 +93,4 @@ jobs:
       with:
         name: pmOS-GT-S7580
         path: /home/runner/.local/var/pmbootstrap/chroot_native/tmp/postmarketOS-export/*
+ 
