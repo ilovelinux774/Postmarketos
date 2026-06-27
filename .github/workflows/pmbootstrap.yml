@@ -1,0 +1,43 @@
+name: Build postmarketOS Image
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Install pmbootstrap & Dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y python3-pip openssl git openssh-client
+        pip3 install pmbootstrap --break-system-packages
+
+    - name: Setup pmbootstrap Configuration
+      run: |
+        # Yeni pmbootstrap sürümlerinde non-interactive (etkileşimsiz) config hazırlığı
+        mkdir -p ~/.config
+        pmbootstrap init --as-configured --path=/tmp/pmbootstrap-work --arch=armv7 --device=samsung-j4plus --channel=edge --ui=xfce4
+
+    - name: Zap and Pull pmaports
+      run: |
+        # Depoları ve chroot ortamını yeni pmbootstrap v3 standartlarına göre temizleyip çekiyoruz
+        pmbootstrap update
+
+    - name: Build Flashable Image
+      run: |
+        # İmajı oluştur ve export et
+        pmbootstrap install --no-fprofile
+        pmbootstrap export
+
+    - name: Upload Build Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: pmOS-samsung-j4plus
+        path: /tmp/pmbootstrap-work/chroot_native/tmp/postmarketOS-export/*
