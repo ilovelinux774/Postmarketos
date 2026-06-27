@@ -84,8 +84,8 @@ jobs:
 
     - name: Build Flashable Image
       run: |
-        # Patlayan --no-fprofile parametresini kaldırdık, en yalın haliyle çalıştırıyoruz
-        pmbootstrap install
+        # Senin dediğin gibi echo kullanarak kullanıcı şifresini (1234) otomatik besliyoruz
+        echo -e "1234\n1234" | pmbootstrap install
         pmbootstrap export
 
     - name: Upload Build Artifacts
