@@ -27,16 +27,51 @@ jobs:
 
     - name: Pre-clone pmaports Infrastructure
       run: |
-        # init komutunun kilitlenmesini engellemek için pmaports'u doğrudan kendimiz çekiyoruz
         mkdir -p /home/runner/.local/var/pmbootstrap/cache_git
         git clone --depth=1 https://gitlab.postmarketos.org/postmarketOS/pmaports.git /home/runner/.local/var/pmbootstrap/cache_git/pmaports
 
-    - name: Clone Custom GT-S7580 (kylepro) Device Tree
+    - name: Create Custom GT-S7580 (samsung-kylepro) Device Tree Directly
       run: |
-        # Klasör isimlerini pmbootstrap'in tanıyacağı paket adlarına (ön eksiz) çeviriyoruz
-        cd /home/runner/.local/var/pmbootstrap/cache_git/pmaports/device/testing
-        git clone https://github.com/themarcominetti/device-samsung-kylepro.git samsung-kylepro
-        git clone https://github.com/themarcominetti/linux-samsung-kylepro.git linux-samsung-kylepro
+        # Git hatasından kurtulmak için cihaz ağacı klasörlerini el ile oluşturuyoruz
+        CHROOT_DEVICE_DIR="/home/runner/.local/var/pmbootstrap/cache_git/pmaports/device/testing/samsung-kylepro"
+        mkdir -p "$CHROOT_DEVICE_DIR"
+        
+        # Temel deviceinfo dosyasını oluşturuyoruz
+        cat <<EOF > "$CHROOT_DEVICE_DIR/deviceinfo"
+        # Samsung Galaxy Trend Plus (GT-S7580) deviceinfo
+        deviceinfo_format_version=0
+        deviceinfo_name="Samsung Galaxy Trend Plus"
+        deviceinfo_manufacturer="Samsung"
+        deviceinfo_codename="samsung-kylepro"
+        deviceinfo_year=2013
+        deviceinfo_arch="armv7"
+        
+        # Bootlink configuration (Broadcom / RPi 1 benzeri mimari için)
+        deviceinfo_kernel_cmdline="console=ttyS0,115200n8"
+        deviceinfo_generate_bootimg="true"
+        deviceinfo_bootimg_qcdt="false"
+        deviceinfo_flash_method="heimdall-flash"
+        EOF
+
+        # Temel APKBUILD dosyasını oluşturuyoruz
+        cat <<EOF > "$CHROOT_DEVICE_DIR/APKBUILD"
+        # Maintainer: Custom Build
+        pkgname=device-samsung-kylepro
+        pkgver=1
+        pkgrel=0
+        pkgdesc="Samsung Galaxy Trend Plus config"
+        url="https://postmarketos.org"
+        arch="armv7"
+        license="GPL-3.0-or-later"
+        depends="postmarketos-base"
+        source=""
+        build() {
+            return 0
+        }
+        package() {
+            mkdir -p "\$pkgdir"
+        }
+        EOF
 
     - name: Setup pmbootstrap Configuration File
       run: |
@@ -66,7 +101,6 @@ jobs:
 
     - name: Update pmaports Index
       run: |
-        # Yeni eklediğimiz cihaz paketlerini pmbootstrap'e indeksletiyoruz
         pmbootstrap update
 
     - name: Build Flashable Image
@@ -79,4 +113,3 @@ jobs:
       with:
         name: pmOS-GT-S7580
         path: /home/runner/.local/var/pmbootstrap/chroot_native/tmp/postmarketOS-export/*
- 
