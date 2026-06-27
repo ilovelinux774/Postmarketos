@@ -75,7 +75,6 @@ jobs:
 
     - name: Configure pmbootstrap Targets via CLI
       run: |
-        # Geçersiz olan 'channel' satırını sildik, sadece listedeki geçerli seçenekleri yapılandırıyoruz
         pmbootstrap config device samsung-kylepro
         pmbootstrap config ui xfce4
 
@@ -85,7 +84,8 @@ jobs:
 
     - name: Build Flashable Image
       run: |
-        pmbootstrap install --no-fprofile
+        # Patlayan --no-fprofile parametresini kaldırdık, en yalın haliyle çalıştırıyoruz
+        pmbootstrap install
         pmbootstrap export
 
     - name: Upload Build Artifacts
