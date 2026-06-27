@@ -32,11 +32,9 @@ jobs:
 
     - name: Create Custom GT-S7580 (samsung-kylepro) Device Tree Directly
       run: |
-        # Git hatasından kurtulmak için cihaz ağacı klasörlerini el ile oluşturuyoruz
         CHROOT_DEVICE_DIR="/home/runner/.local/var/pmbootstrap/cache_git/pmaports/device/testing/samsung-kylepro"
         mkdir -p "$CHROOT_DEVICE_DIR"
         
-        # Temel deviceinfo dosyasını oluşturuyoruz
         cat <<EOF > "$CHROOT_DEVICE_DIR/deviceinfo"
         # Samsung Galaxy Trend Plus (GT-S7580) deviceinfo
         deviceinfo_format_version=0
@@ -46,14 +44,12 @@ jobs:
         deviceinfo_year=2013
         deviceinfo_arch="armv7"
         
-        # Bootlink configuration (Broadcom / RPi 1 benzeri mimari için)
         deviceinfo_kernel_cmdline="console=ttyS0,115200n8"
         deviceinfo_generate_bootimg="true"
         deviceinfo_bootimg_qcdt="false"
         deviceinfo_flash_method="heimdall-flash"
         EOF
 
-        # Temel APKBUILD dosyasını oluşturuyoruz
         cat <<EOF > "$CHROOT_DEVICE_DIR/APKBUILD"
         # Maintainer: Custom Build
         pkgname=device-samsung-kylepro
@@ -73,31 +69,17 @@ jobs:
         }
         EOF
 
-    - name: Setup pmbootstrap Configuration File
+    - name: Initialize pmbootstrap (v3.10+ Non-Interactive Mode)
       run: |
-        mkdir -p ~/.config
-        cat <<EOF > ~/.config/pmbootstrap.cfg
-        [pmbootstrap]
-        version = 3
-        work = /home/runner/.local/var/pmbootstrap
-        jobs = 4
-        ccache_size = 5G
-        is_default_channel = False
-        mirrors_alpine = http://dl-cdn.alpinelinux.org/alpine/
-        auto_init = True
+        # Yeni sürümün resmi etkileşimsiz ilk kurulum parametresini kullanıyoruz
+        pmbootstrap init --no-interactive
 
-        [providers]
-
-        [config]
-        channel = edge
-        arch = armv7
-        device = samsung-kylepro
-        ui = xfce4
-        user = pmos
-        extra_packages = none
-        timezone = GMT
-        keymaps = none
-        EOF
+    - name: Configure pmbootstrap Targets via CLI
+      run: |
+        # Config dosyasını el ile yazmak yerine resmi CLI komutlarıyla güncelliyoruz
+        pmbootstrap config channel edge
+        pmbootstrap config device samsung-kylepro
+        pmbootstrap config ui xfce4
 
     - name: Update pmaports Index
       run: |
