@@ -20,19 +20,41 @@ jobs:
 
     - name: Clone and Install pmbootstrap from Source
       run: |
-        # Yeni resmi Git altyapısından klonluyoruz
         git clone https://gitlab.postmarketos.org/postmarketOS/pmbootstrap.git
         cd pmbootstrap
         sudo ln -s "$(pwd)/pmbootstrap.py" /usr/local/bin/pmbootstrap
         chmod +x pmbootstrap.py
 
-    - name: Setup pmbootstrap Configuration
+    - name: Setup pmbootstrap Configuration File Directly
       run: |
+        # init komutunun hata vermesini önlemek için config dosyasını manuel oluşturuyoruz
         mkdir -p ~/.config
-        pmbootstrap init --as-configured --path=/tmp/pmbootstrap-work --arch=armv7 --device=samsung-j4plus --channel=edge --ui=xfce4
+        cat <<EOF > ~/.config/pmbootstrap.cfg
+        [pmbootstrap]
+        version = 3
+        work = /tmp/pmbootstrap-work
+        jobs = 4
+        ccache_size = 5G
+        is_default_channel = False
+        mirrors_alpine = http://dl-cdn.alpinelinux.org/alpine/
+        auto_init = True
+
+        [providers]
+
+        [config]
+        channel = edge
+        arch = armv7
+        device = samsung-j4plus
+        ui = xfce4
+        user = pmos
+        extra_packages = none
+        timezone = GMT
+        keymaps = none
+        EOF
 
     - name: Zap and Pull pmaports
       run: |
+        # Konfigürasyon hazır olduğu için doğrudan depoları güncelleyebiliriz
         pmbootstrap update
 
     - name: Build Flashable Image
@@ -45,3 +67,4 @@ jobs:
       with:
         name: pmOS-samsung-j4plus
         path: /tmp/pmbootstrap-work/chroot_native/tmp/postmarketOS-export/*
+ 
