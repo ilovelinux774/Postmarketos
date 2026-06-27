@@ -69,14 +69,14 @@ jobs:
         }
         EOF
 
-    - name: Initialize pmbootstrap (v3.10+ Non-Interactive Mode)
+    - name: Initialize pmbootstrap (Sonsuz Enter Yöntemi)
       run: |
-        # Yeni sürümün resmi etkileşimsiz ilk kurulum parametresini kullanıyoruz
-        pmbootstrap init --no-interactive
+        # yes "" komutu pmbootstrap init sihirbazındaki tüm sorulara boş enter basarak otomatik geçer
+        yes "" | pmbootstrap init
 
     - name: Configure pmbootstrap Targets via CLI
       run: |
-        # Config dosyasını el ile yazmak yerine resmi CLI komutlarıyla güncelliyoruz
+        # Otomatik oluşan güncel formattaki config dosyasını resmi komutlarla düzenliyoruz
         pmbootstrap config channel edge
         pmbootstrap config device samsung-kylepro
         pmbootstrap config ui xfce4
