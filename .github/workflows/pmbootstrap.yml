@@ -52,7 +52,6 @@ jobs:
 
         cat <<EOF > "$CHROOT_DEVICE_DIR/APKBUILD"
         # Maintainer: Custom Build
-        # Klasör adıyla uyuşması için pkgname değerini düzelttik
         pkgname=samsung-kylepro
         pkgver=1
         pkgrel=0
@@ -77,7 +76,8 @@ jobs:
     - name: Configure pmbootstrap Targets via CLI
       run: |
         pmbootstrap config device samsung-kylepro
-        pmbootstrap config ui xfce4 
+        # systemd'yi kapatmak ve OpenRC'ye zorlamak için arayüzü 'none' yapıyoruz
+        pmbootstrap config ui none
 
     - name: Update pmaports Index
       run: |
@@ -85,7 +85,8 @@ jobs:
 
     - name: Build Flashable Image
       run: |
-        echo -e "1234\n1234" | pmbootstrap install
+        # Hem hafif OpenRC tabanıyla hem de geliştirici moduyla tertemiz bir build alıyoruz
+        echo -e "1234\n1234" | pmbootstrap install --on-dev
         pmbootstrap export
 
     - name: Upload Build Artifacts
@@ -93,4 +94,3 @@ jobs:
       with:
         name: pmOS-GT-S7580
         path: /home/runner/.local/var/pmbootstrap/chroot_native/tmp/postmarketOS-export/*
- 
