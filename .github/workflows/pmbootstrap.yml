@@ -10,9 +10,9 @@ jobs:
 
     steps:
       # ----------------------------
-      # Checkout your repo
+      # Checkout repository
       # ----------------------------
-      - name: Checkout repository
+      - name: Checkout repo
         uses: actions/checkout@v4
 
       # ----------------------------
@@ -62,7 +62,7 @@ jobs:
           git clone https://gitlab.postmarketos.org/postmarketOS/pmaports.git
 
       # ----------------------------
-      # Version sanity check
+      # Verify versions (prevents mismatches)
       # ----------------------------
       - name: Check versions
         run: |
@@ -70,24 +70,27 @@ jobs:
           cd pmaports && git log -1 --oneline
 
       # ----------------------------
-      # Init pmbootstrap (FIXED NON-INTERACTIVE)
+      # Init pmbootstrap (FULL NON-INTERACTIVE FIX)
       # ----------------------------
       - name: Init pmbootstrap
         env:
           PMB_DEVICE: samsung-kylepro
           PMB_CHANNEL: edge
         run: |
-          printf "y\n" | pmbootstrap init
+          pmbootstrap init \
+            --work /home/runner/work/pmbootstrap \
+            --aports /home/runner/work/pmaports \
+            --no-interactive
 
       # ----------------------------
-      # Build kernel
+      # Build kernel package
       # ----------------------------
       - name: Build kernel
         run: |
           pmbootstrap -p pmaports build linux-samsung-kylepro
 
       # ----------------------------
-      # Upload build artifacts
+      # Upload artifacts
       # ----------------------------
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
