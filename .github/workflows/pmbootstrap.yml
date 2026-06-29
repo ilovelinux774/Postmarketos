@@ -9,12 +9,19 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      # ----------------------------
+      # Checkout repo
+      # ----------------------------
+      - name: Checkout
         uses: actions/checkout@v4
 
+      # ----------------------------
+      # Install dependencies
+      # ----------------------------
       - name: Install dependencies
         run: |
           sudo apt update
+
           sudo apt install -y \
             git \
             python3 \
@@ -36,6 +43,9 @@ jobs:
 
           python3 -m pip install --upgrade pip setuptools wheel
 
+      # ----------------------------
+      # Install pmbootstrap from git
+      # ----------------------------
       - name: Install pmbootstrap
         run: |
           git clone https://gitlab.postmarketos.org/postmarketOS/pmbootstrap.git
@@ -44,26 +54,41 @@ jobs:
 
           echo "$HOME/.local/bin" >> $GITHUB_PATH
 
+      # ----------------------------
+      # Clone pmaports
+      # ----------------------------
       - name: Clone pmaports
         run: |
           git clone https://gitlab.postmarketos.org/postmarketOS/pmaports.git
 
+      # ----------------------------
+      # Check versions
+      # ----------------------------
       - name: Check versions
         run: |
           pmbootstrap --version
           cd pmaports && git log -1 --oneline
 
+      # ----------------------------
+      # Init pmbootstrap (fully automated)
+      # ----------------------------
       - name: Init pmbootstrap
         env:
           PMB_DEVICE: samsung-kylepro
           PMB_CHANNEL: edge
         run: |
-          printf "\n\n\n\n\n" | pmbootstrap init
+          printf "edge\nqemu\namd64\nstable\nconsole\nn\n" | pmbootstrap init
 
+      # ----------------------------
+      # Build kernel
+      # ----------------------------
       - name: Build kernel
         run: |
           pmbootstrap build linux-samsung-kylepro
 
+      # ----------------------------
+      # Upload artifacts
+      # ----------------------------
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
