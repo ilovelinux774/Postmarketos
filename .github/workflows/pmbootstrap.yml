@@ -10,18 +10,17 @@ jobs:
 
     steps:
       # ----------------------------
-      # Checkout repo
+      # Checkout
       # ----------------------------
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       # ----------------------------
-      # Install dependencies
+      # Dependencies
       # ----------------------------
       - name: Install dependencies
         run: |
           sudo apt update
-
           sudo apt install -y \
             git \
             python3 \
@@ -44,40 +43,31 @@ jobs:
           python3 -m pip install --upgrade pip setuptools wheel
 
       # ----------------------------
-      # Install pmbootstrap from git
+      # pmbootstrap install (git)
       # ----------------------------
       - name: Install pmbootstrap
         run: |
           git clone https://gitlab.postmarketos.org/postmarketOS/pmbootstrap.git
           cd pmbootstrap
           pip3 install --user -e .
-
           echo "$HOME/.local/bin" >> $GITHUB_PATH
 
       # ----------------------------
-      # Clone pmaports
+      # pmaports
       # ----------------------------
       - name: Clone pmaports
         run: |
           git clone https://gitlab.postmarketos.org/postmarketOS/pmaports.git
 
       # ----------------------------
-      # Check versions
-      # ----------------------------
-      - name: Check versions
-        run: |
-          pmbootstrap --version
-          cd pmaports && git log -1 --oneline
-
-      # ----------------------------
-      # Init pmbootstrap (fully automated)
+      # Init pmbootstrap (CORRECT WAY)
       # ----------------------------
       - name: Init pmbootstrap
         env:
           PMB_DEVICE: samsung-kylepro
           PMB_CHANNEL: edge
         run: |
-          printf "edge\nqemu\namd64\nstable\nconsole\nn\n" | pmbootstrap init
+          printf "\nconsole\nn\n" | pmbootstrap init
 
       # ----------------------------
       # Build kernel
