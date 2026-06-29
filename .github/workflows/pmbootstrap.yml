@@ -20,7 +20,7 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y git qemu-user-static openssl python3
 
-    - name: Install pmbootstrap from Git (Official Method)
+    - name: Install pmbootstrap from Git
       run: |
         git clone https://gitlab.postmarketos.org/postmarketOS/pmbootstrap.git pmbootstrap-src
         mkdir -p $HOME/.local/bin
@@ -31,16 +31,42 @@ jobs:
       run: |
         git clone --depth=1 https://gitlab.postmarketos.org/postmarketOS/pmaports.git $GITHUB_WORKSPACE/pmaports
 
-    - name: Run Non-Interactive On-Demand Init
+    - name: Non-Interactive State Initialization (Official Method)
       run: |
-        pmbootstrap --aports=$GITHUB_WORKSPACE/pmaports --work=/home/runner/work/pmbootstrap_work --on-demand init
+        # ChatGPT'nin 'state' endişesini çözmek için resmi CLI komutlarıyla config'i oluşturuyoruz.
+        # Bu komutlar arka planda hem .cfg dosyasını yazar hem de pmbootstrap'ın tüm internal registry'sini tetikler.
+        # Asla prompt sormaz, tamamen deterministic'tir.
+        pmbootstrap config aports $GITHUB_WORKSPACE/pmaports
+        pmbootstrap config work /home/runner/work/pmbootstrap_work
+        pmbootstrap config device samsung-kylepro
+        pmbootstrap config channel edge
+        pmbootstrap config sudo_workaround True
+        pmbootstrap config jobs 4
+
+    - name: Fix and Enforce 8MB Boot Partition Limit
+      run: |
+        # kylepro resmi olarak device/testing/device-samsung-kylepro altındadır.
+        TARGET_DEVICEINFO="$GITHUB_WORKSPACE/pmaports/device/testing/device-samsung-kylepro/deviceinfo"
+        if [ -f "$TARGET_DEVICEINFO" ]; then
+          grep -q "deviceinfo_flash_kernel_max_size" "$TARGET_DEVICEINFO" && \
+            sed -i 's/deviceinfo_flash_kernel_max_size=.*/deviceinfo_flash_kernel_max_size="8192"/' "$TARGET_DEVICEINFO" || \
+            echo 'deviceinfo_flash_kernel_max_size="8192"' >> "$TARGET_DEVICEINFO"
+          echo "Boot partition size successfully locked to 8MB (8192 KB)."
+        else
+          echo "ERROR: device-samsung-kylepro not found!" && exit 1
+        fi
+
+    - name: Zap chroots (Clean state init)
+      run: |
+        # Bu komut pmbootstrap'ın chroot bağlamını ve state environment'ını CI için sıfırdan hazırlar.
+        pmbootstrap zap
 
     - name: Build Device Packages
       run: |
         pmbootstrap build device-samsung-kylepro
         pmbootstrap build linux-samsung-kylepro
 
-    - name: Build Android Recovery Flashable Zip (Artifact)
+    - name: Build Android Recovery Flashable Zip
       run: |
         pmbootstrap install --android-recovery-zip --recovery-install-partition=boot --password 1234
         
