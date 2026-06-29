@@ -1,96 +1,45 @@
-name: Build postmarketOS Image for GT-S7580
+name: postmarketOS kylepro build
 
 on:
   push:
-    branches: [ main ]
-  workflow_dispatch:
+  pull_request:
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout Repository
-      uses: actions/checkout@v4
+      - name: Checkout repo
+        uses: actions/checkout@v4
 
-    - name: Install Dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y python3 python3-git openssl git openssh-client
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y git python3 python3-pip alpine-sdk qemu-user-static
+          pip3 install pmbootstrap
 
-    - name: Clone and Install pmbootstrap from Source
-      run: |
-        git clone https://gitlab.postmarketos.org/postmarketOS/pmbootstrap.git
-        cd pmbootstrap
-        sudo ln -s "$(pwd)/pmbootstrap.py" /usr/local/bin/pmbootstrap
-        chmod +x pmbootstrap.py
+      - name: Enable binfmt (QEMU support for cross build)
+        run: |
+          sudo update-binfmts --enable qemu-arm || true
 
-    - name: Pre-clone pmaports Infrastructure
-      run: |
-        mkdir -p /home/runner/.local/var/pmbootstrap/cache_git
-        git clone --depth=1 https://gitlab.postmarketos.org/postmarketOS/pmaports.git /home/runner/.local/var/pmbootstrap/cache_git/pmaports
+      - name: Clone pmaports
+        run: |
+          git clone https://gitlab.com/postmarketOS/pmaports.git
 
-    - name: Create Custom GT-S7580 (samsung-kylepro) Device Tree Directly
-      run: |
-        CHROOT_DEVICE_DIR="/home/runner/.local/var/pmbootstrap/cache_git/pmaports/device/testing/samsung-kylepro"
-        mkdir -p "$CHROOT_DEVICE_DIR"
-        
-        cat <<EOF > "$CHROOT_DEVICE_DIR/deviceinfo"
-        # Samsung Galaxy Trend Plus (GT-S7580) deviceinfo
-        deviceinfo_format_version=0
-        deviceinfo_name="Samsung Galaxy Trend Plus"
-        deviceinfo_manufacturer="Samsung"
-        deviceinfo_codename="samsung-kylepro"
-        deviceinfo_year=2013
-        deviceinfo_arch="armv7"
-        
-        deviceinfo_kernel_cmdline="console=ttyS0,115200n8"
-        deviceinfo_generate_bootimg="true"
-        deviceinfo_bootimg_qcdt="false"
-        deviceinfo_flash_method="heimdall-flash"
-        EOF
+      - name: Initialize pmbootstrap
+        run: |
+          pmbootstrap --details-to-stdout \
+            -p pmaports \
+            init --non-interactive \
+            --device samsung-kylepro \
+            --channel edge
 
-        cat <<EOF > "$CHROOT_DEVICE_DIR/APKBUILD"
-        # Maintainer: Custom Build
-        pkgname=samsung-kylepro
-        pkgver=1
-        pkgrel=0
-        pkgdesc="Samsung Galaxy Trend Plus config"
-        url="https://postmarketos.org"
-        arch="armv7"
-        license="GPL-3.0-or-later"
-        depends="postmarketos-base"
-        source=""
-        build() {
-            return 0
-        }
-        package() {
-            mkdir -p "\$pkgdir"
-        }
-        EOF
+      - name: Build kernel package
+        run: |
+          pmbootstrap -p pmaports build linux-samsung-kylepro
 
-    - name: Initialize pmbootstrap (Sonsuz Enter Yöntemi)
-      run: |
-        yes "" | pmbootstrap init
-
-    - name: Configure pmbootstrap Targets via CLI
-      run: |
-        pmbootstrap config device samsung-kylepro
-        # systemd'yi kapatmak ve OpenRC'ye zorlamak için arayüzü 'none' yapıyoruz
-        pmbootstrap config ui none
-
-    - name: Update pmaports Index
-      run: |
-        pmbootstrap update
-
-    - name: Build Flashable Image
-      run: |
-        # Hem hafif OpenRC tabanıyla hem de geliştirici moduyla tertemiz bir build alıyoruz
-        echo -e "1234\n1234" | pmbootstrap install --on-dev
-        pmbootstrap export
-
-    - name: Upload Build Artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: pmOS-GT-S7580
-        path: /home/runner/.local/var/pmbootstrap/chroot_native/tmp/postmarketOS-export/*
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: kylepro-build
+          path: /home/runner/.local/var/pmbootstrap/packages/
