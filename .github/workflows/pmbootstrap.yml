@@ -10,13 +10,13 @@ jobs:
 
     steps:
       # ----------------------------
-      # Checkout repository
+      # Checkout repo
       # ----------------------------
-      - name: Checkout repo
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       # ----------------------------
-      # System dependencies
+      # Install dependencies
       # ----------------------------
       - name: Install dependencies
         run: |
@@ -44,7 +44,7 @@ jobs:
           python3 -m pip install --upgrade pip setuptools wheel
 
       # ----------------------------
-      # Install pmbootstrap (NEW official repo)
+      # Install pmbootstrap (git, not pip)
       # ----------------------------
       - name: Install pmbootstrap
         run: |
@@ -55,14 +55,14 @@ jobs:
           echo "$HOME/.local/bin" >> $GITHUB_PATH
 
       # ----------------------------
-      # Clone pmaports (NEW official repo)
+      # Clone pmaports
       # ----------------------------
       - name: Clone pmaports
         run: |
           git clone https://gitlab.postmarketos.org/postmarketOS/pmaports.git
 
       # ----------------------------
-      # Verify versions (prevents mismatches)
+      # Check versions (debug safety)
       # ----------------------------
       - name: Check versions
         run: |
@@ -70,24 +70,21 @@ jobs:
           cd pmaports && git log -1 --oneline
 
       # ----------------------------
-      # Init pmbootstrap (FULL NON-INTERACTIVE FIX)
+      # INIT (CORRECT CLI ORDER + NO INVALID FLAGS)
       # ----------------------------
       - name: Init pmbootstrap
-        env:
-          PMB_DEVICE: samsung-kylepro
-          PMB_CHANNEL: edge
         run: |
-          pmbootstrap init \
-            --work /home/runner/work/pmbootstrap \
-            --aports /home/runner/work/pmaports \
-            --no-interactive
+          printf "\n\n\n\n\n" | pmbootstrap \
+            -w /home/runner/work/pmbootstrap \
+            -p /home/runner/work/pmaports \
+            init
 
       # ----------------------------
-      # Build kernel package
+      # Build kernel
       # ----------------------------
       - name: Build kernel
         run: |
-          pmbootstrap -p pmaports build linux-samsung-kylepro
+          pmbootstrap -p /home/runner/work/pmaports build linux-samsung-kylepro
 
       # ----------------------------
       # Upload artifacts
