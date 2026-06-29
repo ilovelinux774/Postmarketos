@@ -1,1 +1,96 @@
+name: postmarketOS CI - samsung-kylepro
 
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # ----------------------------
+      # Checkout repo
+      # ----------------------------
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # ----------------------------
+      # System dependencies
+      # ----------------------------
+      - name: Install dependencies
+        run: |
+          sudo apt update
+
+          sudo apt install -y \
+            git \
+            python3 \
+            python3-pip \
+            python3-setuptools \
+            python3-wheel \
+            device-tree-compiler \
+            cpio \
+            curl \
+            bzip2 \
+            gzip \
+            lzop \
+            rsync \
+            tar \
+            wget \
+            xz-utils \
+            qemu-user-static \
+            binfmt-support
+
+          python3 -m pip install --upgrade pip setuptools wheel
+
+      # ----------------------------
+      # Install pmbootstrap from NEW official repo
+      # ----------------------------
+      - name: Install pmbootstrap
+        run: |
+          git clone https://gitlab.postmarketos.org/postmarketOS/pmbootstrap.git
+          cd pmbootstrap
+          pip3 install --user -e .
+
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      # ----------------------------
+      # Clone pmaports (NEW official repo)
+      # ----------------------------
+      - name: Clone pmaports
+        run: |
+          git clone https://gitlab.postmarketos.org/postmarketOS/pmaports.git
+
+      # ----------------------------
+      # Version check (prevents repo mismatch errors)
+      # ----------------------------
+      - name: Check versions
+        run: |
+          pmbootstrap --version
+          cd pmaports && git log -1 --oneline
+
+      # ----------------------------
+      # Init pmbootstrap (NEW syntax)
+      # ----------------------------
+      - name: Init pmbootstrap
+        env:
+          PMB_DEVICE: samsung-kylepro
+          PMB_CHANNEL: edge
+        run: |
+          pmbootstrap init --yes
+
+      # ----------------------------
+      # Build kernel
+      # ----------------------------
+      - name: Build kernel
+        run: |
+          pmbootstrap -p pmaports build linux-samsung-kylepro
+
+      # ----------------------------
+      # Upload artifacts
+      # ----------------------------
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: kylepro-build
+          path: /home/runner/.local/var/pmbootstrap/packages/
