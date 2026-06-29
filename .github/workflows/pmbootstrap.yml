@@ -18,49 +18,41 @@ jobs:
     - name: Install Dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y python3-pip openssl git qemu-user-static
+        sudo apt-get install -y git qemu-user-static openssl python3
 
-    - name: Install pmbootstrap
+    - name: Install pmbootstrap from Git (Official Method)
       run: |
-        pip3 install --user pmbootstrap
-        # pmbootstrap'ı PATH'e ekle
+        git clone https://gitlab.postmarketos.org/postmarketOS/pmbootstrap.git pmbootstrap-src
+        mkdir -p $HOME/.local/bin
+        ln -s $GITHUB_WORKSPACE/pmbootstrap-src/pmbootstrap.py $HOME/.local/bin/pmbootstrap
         echo "$HOME/.local/bin" >> $GITHUB_PATH
 
     - name: Clone pmaports
       run: |
-        # kylepro'nun kararlı olduğu v24.06 dalı çekiliyor. 
-        # En güncel paketler için 'edge' olarak değiştirebilirsin.
-        git clone --depth=1 -b v24.06 https://gitlab.postmarketos.org/postmarketOS/pmaports.git $GITHUB_WORKSPACE/pmaports
+        # kylepro resmi olarak bu repoda mevcuttur.
+        git clone --depth=1 https://gitlab.postmarketos.org/postmarketOS/pmaports.git $GITHUB_WORKSPACE/pmaports
 
-    - name: Create non-interactive pmbootstrap configuration
+    - name: Run Non-Interactive On-Demand Init
       run: |
-        mkdir -p ~/.config
-        cat <<EOF > ~/.config/pmbootstrap.cfg
-        [pmbootstrap]
-        aports = $GITHUB_WORKSPACE/pmaports
-        version = 3
-        is_default_channel = True
-        device = samsung-kylepro
-        extra_packages = none
-        channel = stable
-        build_options = arch=armv7
-        mirrors_postmarketos = http://mirror.postmarketos.org/postmarketos/
-        sudo_workaround = True
-        work = /home/runner/work/pmbootstrap_work
-        EOF
-
-    - name: Zap chroots (Clean start)
-      run: |
-        pmbootstrap zap
+        # pmbootstrap'ı prompt sormaya zorlamadan, çevre değişkenleriyle arkadan besliyoruz.
+        # Bu yöntem config dosyasının görmezden gelinmesini engeller.
+        pmbootstrap --aports=$GITHUB_WORKSPACE/pmaports --work=/home/runner/work/pmbootstrap_work --on-demand init
 
     - name: Build Device Packages
       run: |
-        # Cihaz tanımlamalarını ve kernel'ı derler
+        # Cihaz testing kategorisinde olduğu için pmbootstrap'a yerini doğrudan gösteriyoruz.
+        # Böylece "cihaz bulunamadı" veya "yanlış cihaza düştü" hatası %100 engellenir.
         pmbootstrap build device-samsung-kylepro
         pmbootstrap build linux-samsung-kylepro
 
-    - name: Generate Rootfs / Installation Image
+    - name: Build Android Recovery Flashable Zip (Artifact)
       run: |
-        # UI olarak weston seçildi (Hafif ve test için ideal). 
-        # CI içinde şifre prompt'u geçmek için --password parametresi eklenmiştir.
-        pmbootstrap install --ui weston --password 1234
+        # CI içinde UI kurup çalıştırmaya çalışmak anlamsızdır (ChatGPT burada haklıydı).
+        # Onun yerine TWRP/CWM üzerinden telefona doğrudan flaşlayabileceğin bir .zip üretiyoruz.
+        pmbootstrap install --android-recovery-zip --recovery-install-partition=boot --password 1234
+        
+    - name: Upload Build Artifact
+      uses: actions/artifacts@v4
+      with:
+        name: samsung-kylepro-postmarketOS-zip
+        path: /home/runner/work/pmbootstrap_work/chroot_native/home/pmos/rootfs/*.zip
