@@ -29,30 +29,23 @@ jobs:
 
     - name: Clone pmaports
       run: |
-        # kylepro resmi olarak bu repoda mevcuttur.
         git clone --depth=1 https://gitlab.postmarketos.org/postmarketOS/pmaports.git $GITHUB_WORKSPACE/pmaports
 
     - name: Run Non-Interactive On-Demand Init
       run: |
-        # pmbootstrap'ı prompt sormaya zorlamadan, çevre değişkenleriyle arkadan besliyoruz.
-        # Bu yöntem config dosyasının görmezden gelinmesini engeller.
         pmbootstrap --aports=$GITHUB_WORKSPACE/pmaports --work=/home/runner/work/pmbootstrap_work --on-demand init
 
     - name: Build Device Packages
       run: |
-        # Cihaz testing kategorisinde olduğu için pmbootstrap'a yerini doğrudan gösteriyoruz.
-        # Böylece "cihaz bulunamadı" veya "yanlış cihaza düştü" hatası %100 engellenir.
         pmbootstrap build device-samsung-kylepro
         pmbootstrap build linux-samsung-kylepro
 
     - name: Build Android Recovery Flashable Zip (Artifact)
       run: |
-        # CI içinde UI kurup çalıştırmaya çalışmak anlamsızdır (ChatGPT burada haklıydı).
-        # Onun yerine TWRP/CWM üzerinden telefona doğrudan flaşlayabileceğin bir .zip üretiyoruz.
         pmbootstrap install --android-recovery-zip --recovery-install-partition=boot --password 1234
         
     - name: Upload Build Artifact
-      uses: actions/artifacts@v4
+      uses: actions/upload-artifact@v4
       with:
         name: samsung-kylepro-postmarketOS-zip
         path: /home/runner/work/pmbootstrap_work/chroot_native/home/pmos/rootfs/*.zip
