@@ -1,4 +1,4 @@
-name: postmarketOS CI - samsung-kylepro
+name: postmarketOS CI - samsung-kylepro (new infra)
 
 on:
   push:
@@ -9,13 +9,16 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repo
+      # ----------------------------
+      # Checkout your repo
+      # ----------------------------
+      - name: Checkout
         uses: actions/checkout@v4
 
       # ----------------------------
-      # System dependencies
+      # Install system dependencies
       # ----------------------------
-      - name: Install system dependencies
+      - name: Install dependencies
         run: |
           sudo apt update
 
@@ -41,33 +44,33 @@ jobs:
           python3 -m pip install --upgrade pip setuptools wheel
 
       # ----------------------------
-      # Install pmbootstrap from OFFICIAL git (no PyPI)
+      # Install pmbootstrap (NEW OFFICIAL REPO)
       # ----------------------------
-      - name: Install pmbootstrap from git
+      - name: Install pmbootstrap
         run: |
-          git clone https://gitlab.com/postmarketOS/pmbootstrap.git
+          git clone https://gitlab.postmarketos.org/postmarketOS/pmbootstrap.git
           cd pmbootstrap
           pip3 install --user -e .
 
           echo "$HOME/.local/bin" >> $GITHUB_PATH
 
       # ----------------------------
-      # Clone pmaports (IMPORTANT: correct repo)
+      # Clone pmaports (official)
       # ----------------------------
       - name: Clone pmaports
         run: |
-          git clone https://gitlab.com/postmarketOS/pmaports.git
+          git clone https://gitlab.postmarketos.org/postmarketOS/pmaports.git
 
       # ----------------------------
-      # Verify versions (prevents "switched repos" errors)
+      # Version sanity check (prevents repo mismatch errors)
       # ----------------------------
       - name: Check versions
         run: |
-          ~/.local/bin/pmbootstrap --version
+          pmbootstrap --version
           cd pmaports && git log -1 --oneline
 
       # ----------------------------
-      # Initialize pmbootstrap safely
+      # Initialize pmbootstrap
       # ----------------------------
       - name: Init pmbootstrap
         run: |
@@ -91,4 +94,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: kylepro-build
-          path: /home/runner/.local/var/pmbootstrap/packages/
+          path: /home/runner/.local/var/pmbootstrap/packages/ 
