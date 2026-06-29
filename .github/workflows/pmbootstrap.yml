@@ -1,4 +1,4 @@
-name: postmarketOS kylepro build
+name: postmarketOS build - samsung-kylepro
 
 on:
   push:
@@ -9,23 +9,52 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repo
+      - name: Checkout repository
         uses: actions/checkout@v4
 
+      # ----------------------------
+      # Install required Ubuntu deps
+      # ----------------------------
       - name: Install dependencies
         run: |
           sudo apt update
-          sudo apt install -y git python3 python3-pip alpine-sdk qemu-user-static
+
+          sudo apt install -y \
+            git \
+            python3 \
+            python3-pip \
+            device-tree-compiler \
+            cpio \
+            curl \
+            bzip2 \
+            gzip \
+            lzop \
+            rsync \
+            tar \
+            wget \
+            xz-utils
+
+          pip3 install --upgrade pip
           pip3 install pmbootstrap
 
-      - name: Enable binfmt (QEMU support for cross build)
+      # ----------------------------
+      # Enable QEMU binfmt (optional but useful for cross builds)
+      # ----------------------------
+      - name: Enable QEMU support
         run: |
+          sudo apt install -y qemu-user-static binfmt-support || true
           sudo update-binfmts --enable qemu-arm || true
 
+      # ----------------------------
+      # Clone pmaports
+      # ----------------------------
       - name: Clone pmaports
         run: |
           git clone https://gitlab.com/postmarketOS/pmaports.git
 
+      # ----------------------------
+      # Initialize pmbootstrap
+      # ----------------------------
       - name: Initialize pmbootstrap
         run: |
           pmbootstrap --details-to-stdout \
@@ -34,10 +63,16 @@ jobs:
             --device samsung-kylepro \
             --channel edge
 
-      - name: Build kernel package
+      # ----------------------------
+      # Build kernel package
+      # ----------------------------
+      - name: Build kernel
         run: |
           pmbootstrap -p pmaports build linux-samsung-kylepro
 
+      # ----------------------------
+      # Upload build artifacts
+      # ----------------------------
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
