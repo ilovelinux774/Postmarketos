@@ -1,41 +1,89 @@
-- name: Fix pmbootstrap init (Claude's Handshake)
-  run: |
-    # 1. pmaports içinde cihaz klasörünü oluştur (init'in cihaz bulamamasını engelle)
-    mkdir -p pmaports/device/samsung/kylepro
-    
-    # 2. APKBUILD dosyasını oluştur (pmbootstrap cihazı tanısın diye)
-    cat > pmaports/device/samsung/kylepro/APKBUILD <<EOF
-    # Maintainer: Your Name <email>
-    pkgname=device-samsung-kylepro
-    pkgver=1
-    pkgrel=0
-    pkgdesc="Dummy device for Samsung GT-S7580 (bypass init)"
-    url="https://postmarketos.org"
-    license="MIT"
-    arch="armv7"
-    depends="linux-samsung-kylepro"
-    makedepends="devicepkg-dev"
-    source=""
-    build() { deviceinfo_generate; }
-    package() { deviceinfo_package; }
-    EOF
+# .github/workflows/pmos-build.yml
+name: postmarketOS Build - Samsung Galaxy Trend Plus (kylepro)
 
-    # 3. deviceinfo dosyasını oluştur (8 MB boot limitini yaz, init buna bakacak)
-    cat > pmaports/device/samsung/kylepro/deviceinfo <<EOF
-    deviceinfo_format_version=0
-    deviceinfo_name="Samsung Galaxy Trend Plus"
-    deviceinfo_codename="samsung-kylepro"
-    deviceinfo_arch="armv7"
-    deviceinfo_chipset="Broadcom BCM28155"
-    deviceinfo_boot_part_size=8192
-    deviceinfo_bootimg_mkbootimg_args="--kernel_offset 0x00008000"
-    deviceinfo_flash_offset_base=0x00000000
-    deviceinfo_flash_offset_kernel=0x00008000
-    deviceinfo_flash_offset_ramdisk=0x01000000
-    deviceinfo_flash_offset_second=0x00F00000
-    deviceinfo_flash_offset_tags=0x00000100
-    deviceinfo_flash_pagesize=2048
-    EOF
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
 
-    # 4. Artık resmi init komutunu pipe'layarak çalıştır (Hata vermeden geçecek!)
-    printf "\n\n\n\n\n\n" | pmbootstrap init
+env:
+  PMOS_CHANNEL: edge
+  PMOS_UI: console
+  PMOS_PASSWORD: "147147"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Disk alanını genişlet
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /opt/hostedtoolcache
+          df -h
+
+      - name: pmbootstrap yapılandırma dosyasını oluştur
+        run: |
+          mkdir -p ~/.config
+          mkdir -p ~/pmbootstrap_work
+
+          cat > ~/.config/pmbootstrap.cfg << EOF
+          [pmbootstrap]
+          build_default_device_arch = True
+          boot_size = 256
+          channel = ${{ env.PMOS_CHANNEL }}
+          device = samsung-kylepro
+          extra_space = 0
+          hostname = samsung-kylepro
+          is_default_channel = False
+          jobs = $(nproc)
+          locale = en_US.UTF-8
+          ssh_keys = False
+          ui = ${{ env.PMOS_UI }}
+          user = user
+          work = /home/runner/pmbootstrap_work
+          EOF
+
+          sed -i 's/^          //' ~/.config/pmbootstrap.cfg
+
+      - name: pmbootstrap init
+        run: |
+          yes "" | pmbootstrap init || true
+
+      - name: Cihaz paketlerini derle
+        run: |
+          pmbootstrap build device-samsung-kylepro --force || true
+          pmbootstrap build linux-samsung-kylepro --force || true
+
+      - name: postmarketOS imajını oluştur
+        run: |
+          yes "${{ env.PMOS_PASSWORD }}" | pmbootstrap install
+
+      - name: İmaj dosyalarını dışa aktar
+        run: |
+          mkdir -p output
+          pmbootstrap export output/
+          ls -lah output/
+
+      - name: Artifact yükle
+        uses: actions/upload-artifact@v4
+        with:
+          name: postmarketos-samsung-kylepro-${{ github.run_number }}
+          path: output/
+          retention-days: 14
+
+      - name: Derleme özeti
+        if: always()
+        run: |
+          echo "Cihaz: Samsung Galaxy Trend Plus (kylepro)"
+          echo "Kanal: ${{ env.PMOS_CHANNEL }}"
+          echo "Arayüz: ${{ env.PMOS_UI }}"
+          ls -lah output/ 2>/dev/null || echo "Dosya bulunamadı"
+          df -h
