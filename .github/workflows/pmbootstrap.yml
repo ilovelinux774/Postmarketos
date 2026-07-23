@@ -49,7 +49,7 @@ jobs:
           pmbootstrap config hostname samsung-kylepro
           pmbootstrap config user user
           pmbootstrap config ssh_keys False
-          pmbootstrap config boot_size 256
+          pmbootstrap config boot_size 512
           pmbootstrap config extra_space 0
           pmbootstrap config locale en_US.UTF-8
           pmbootstrap config jobs 4
@@ -58,11 +58,8 @@ jobs:
         run: |
           echo "Cihaz: $(pmbootstrap config device)"
           echo "UI: $(pmbootstrap config ui)"
+          echo "Boot size: $(pmbootstrap config boot_size)"
           echo "Arch: $(pmbootstrap config build_default_device_arch)"
-          echo "=== Config dosyasinin yeri ==="
-          find ~ -name "pmbootstrap.cfg" -o -name "pmbootstrap_v3.cfg" 2>/dev/null
-          find ~/.config -type f 2>/dev/null
-          find ~/.local -name "*.cfg" 2>/dev/null
 
       - name: Cihaz paketlerini derle
         run: |
@@ -71,7 +68,7 @@ jobs:
 
       - name: postmarketOS imajini olustur
         run: |
-          yes "${{ env.PMOS_PASSWORD }}" | pmbootstrap install
+          printf '%s\n' "${{ env.PMOS_PASSWORD }}" "${{ env.PMOS_PASSWORD }}" | pmbootstrap install
 
       - name: Imaj dosyalarini kontrol et
         run: |
