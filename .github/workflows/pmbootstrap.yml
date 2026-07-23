@@ -8,7 +8,6 @@ on:
   workflow_dispatch:
 
 env:
-  PMOS_CHANNEL: edge
   PMOS_UI: console
   PMOS_PASSWORD: "147147"
 
@@ -38,53 +37,28 @@ jobs:
       - name: pmbootstrap surum kontrolu
         run: pmbootstrap --version
 
-      - name: pmbootstrap config ayarla
-        run: |
-          mkdir -p ~/.config
-          mkdir -p ~/pmbootstrap_work
-          printf '%s\n' \
-            "[pmbootstrap]" \
-            "build_default_device_arch = True" \
-            "boot_size = 256" \
-            "channel = edge" \
-            "device = samsung-kylepro" \
-            "extra_space = 0" \
-            "hostname = samsung-kylepro" \
-            "is_default_channel = False" \
-            "jobs = 4" \
-            "locale = en_US.UTF-8" \
-            "ssh_keys = False" \
-            "ui = console" \
-            "user = user" \
-            "work = /home/runner/pmbootstrap_work" \
-            > ~/.config/pmbootstrap.cfg
-          echo "=== Config dosyasi ==="
-          cat ~/.config/pmbootstrap.cfg
-          echo "======================"
-
-      - name: Config dogrulamasi
-        run: |
-          echo "Cihaz: $(pmbootstrap config device)"
-          echo "UI: $(pmbootstrap config ui)"
-          echo "Channel: $(pmbootstrap config channel)"
-
       - name: pmbootstrap init
         run: |
-          yes "" | pmbootstrap -y init
+          yes "" | pmbootstrap -y init || true
 
-      - name: Init sonrasi config dogrulamasi
+      - name: Config zorla ayarla (init sonrasi)
         run: |
-          echo "=== Init sonrasi config ==="
+          pmbootstrap config device samsung-kylepro
+          pmbootstrap config ui console
+          pmbootstrap config build_default_device_arch True
+          pmbootstrap config hostname samsung-kylepro
+          pmbootstrap config user user
+          pmbootstrap config ssh_keys False
+          pmbootstrap config boot_size 256
+          pmbootstrap config extra_space 0
+          pmbootstrap config locale en_US.UTF-8
+          pmbootstrap config jobs 4
+          echo "=== Final Config ==="
           echo "Cihaz: $(pmbootstrap config device)"
           echo "UI: $(pmbootstrap config ui)"
-          echo "Channel: $(pmbootstrap config channel)"
-          CURRENT_DEVICE=$(pmbootstrap config device)
-          if [ "$CURRENT_DEVICE" != "samsung-kylepro" ]; then
-            echo "UYARI: Cihaz degismis! Duzeltiliyor..."
-            pmbootstrap config device samsung-kylepro
-            pmbootstrap config ui console
-            pmbootstrap config channel edge
-          fi
+          echo "Arch: $(pmbootstrap config build_default_device_arch)"
+          cat ~/.config/pmbootstrap.cfg
+          echo "===================="
 
       - name: Cihaz paketlerini derle
         run: |
@@ -111,7 +85,7 @@ jobs:
           mkdir -p output
           pmbootstrap export output/
           ls -lah output/
-          echo "=== Disa aktarilan dosyalarin mimari kontrolu ==="
+          echo "=== Mimari kontrolu ==="
           for img in output/*.img*; do
             if [ -f "$img" ]; then
               echo "$img:"
@@ -131,13 +105,8 @@ jobs:
         run: |
           echo "========================================="
           echo "Cihaz: Samsung Galaxy Trend Plus (kylepro)"
-          echo "Kanal: ${{ env.PMOS_CHANNEL }}"
-          echo "Arayuz: ${{ env.PMOS_UI }}"
+          echo "UI: ${{ env.PMOS_UI }}"
           echo "========================================="
           pmbootstrap config device 2>/dev/null || true
-          echo ""
-          echo "Olusturulan dosyalar:"
           ls -lah output/ 2>/dev/null || echo "Dosya bulunamadi"
-          echo ""
-          echo "Disk kullanimi:"
           df -h
