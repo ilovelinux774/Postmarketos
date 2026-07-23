@@ -41,7 +41,7 @@ jobs:
         run: |
           yes "" | pmbootstrap -y init || true
 
-      - name: Config zorla ayarla (init sonrasi)
+      - name: Config zorla ayarla
         run: |
           pmbootstrap config device samsung-kylepro
           pmbootstrap config ui console
@@ -53,12 +53,16 @@ jobs:
           pmbootstrap config extra_space 0
           pmbootstrap config locale en_US.UTF-8
           pmbootstrap config jobs 4
-          echo "=== Final Config ==="
+
+      - name: Config dogrulama
+        run: |
           echo "Cihaz: $(pmbootstrap config device)"
           echo "UI: $(pmbootstrap config ui)"
           echo "Arch: $(pmbootstrap config build_default_device_arch)"
-          cat ~/.config/pmbootstrap.cfg
-          echo "===================="
+          echo "=== Config dosyasinin yeri ==="
+          find ~ -name "pmbootstrap.cfg" -o -name "pmbootstrap_v3.cfg" 2>/dev/null
+          find ~/.config -type f 2>/dev/null
+          find ~/.local -name "*.cfg" 2>/dev/null
 
       - name: Cihaz paketlerini derle
         run: |
@@ -71,11 +75,8 @@ jobs:
 
       - name: Imaj dosyalarini kontrol et
         run: |
-          echo "=== Work dizinindeki imajlar ==="
-          find ~/pmbootstrap_work -name "*.img" -o -name "*.img.gz" 2>/dev/null | head -20
-          echo ""
           echo "=== Mimari kontrolu ==="
-          for img in $(find ~/pmbootstrap_work -name "*.img" 2>/dev/null | head -5); do
+          find ~/pmbootstrap_work -name "*.img" -o -name "*.img.gz" 2>/dev/null | while read img; do
             echo "$img:"
             file "$img"
           done
@@ -85,7 +86,6 @@ jobs:
           mkdir -p output
           pmbootstrap export output/
           ls -lah output/
-          echo "=== Mimari kontrolu ==="
           for img in output/*.img*; do
             if [ -f "$img" ]; then
               echo "$img:"
