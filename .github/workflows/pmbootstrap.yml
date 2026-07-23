@@ -29,6 +29,16 @@ jobs:
           sudo rm -rf /opt/hostedtoolcache
           df -h
 
+      - name: pmbootstrap kur
+        run: |
+          git clone --depth=1 https://gitlab.postmarketos.org/postmarketOS/pmbootstrap.git
+          mkdir -p ~/.local/bin
+          ln -s "$PWD/pmbootstrap/pmbootstrap.py" ~/.local/bin/pmbootstrap
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: pmbootstrap sürümünü kontrol et
+        run: pmbootstrap --version
+
       - name: pmbootstrap yapılandırma dosyasını oluştur
         run: |
           mkdir -p ~/.config
