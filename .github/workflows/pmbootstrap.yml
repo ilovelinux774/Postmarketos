@@ -29,58 +29,106 @@ jobs:
           sudo rm -rf /opt/hostedtoolcache
           df -h
 
-      - name: pmbootstrap kur
+      - name: pmbootstrap kur (git clone)
         run: |
-          git clone --depth=1 https://gitlab.postmarketos.org/postmarketOS/pmbootstrap.git
+          git clone --depth=1 https://gitlab.postmarketos.org/postmarketOS/pmbootstrap.git ~/pmbootstrap-tool
           mkdir -p ~/.local/bin
-          ln -s "$PWD/pmbootstrap/pmbootstrap.py" ~/.local/bin/pmbootstrap
+          ln -sf ~/pmbootstrap-tool/pmbootstrap.py ~/.local/bin/pmbootstrap
           echo "$HOME/.local/bin" >> $GITHUB_PATH
 
-      - name: pmbootstrap sürümünü kontrol et
+      - name: pmbootstrap sürüm kontrolü
         run: pmbootstrap --version
 
-      - name: pmbootstrap yapılandırma dosyasını oluştur
+      - name: pmbootstrap config ayarla
         run: |
           mkdir -p ~/.config
           mkdir -p ~/pmbootstrap_work
 
-          cat > ~/.config/pmbootstrap.cfg << EOF
-          [pmbootstrap]
-          build_default_device_arch = True
-          boot_size = 256
-          channel = ${{ env.PMOS_CHANNEL }}
-          device = samsung-kylepro
-          extra_space = 0
-          hostname = samsung-kylepro
-          is_default_channel = False
-          jobs = $(nproc)
-          locale = en_US.UTF-8
-          ssh_keys = False
-          ui = ${{ env.PMOS_UI }}
-          user = user
-          work = /home/runner/pmbootstrap_work
-          EOF
+          # Config dosyasını girintisiz yaz (heredoc ile)
+          cat > ~/.config/pmbootstrap.cfg << 'ENDOFCONFIG'
+[pmbootstrap]
+build_default_device_arch = True
+boot_size = 256
+channel = edge
+device = samsung-kylepro
+extra_space = 0
+hostname = samsung-kylepro
+is_default_channel = False
+jobs = 4
+locale = en_US.UTF-8
+ssh_keys = False
+ui = console
+user = user
+work = /home/runner/pmbootstrap_work
+ENDOFCONFIG
 
-          sed -i 's/^          //' ~/.config/pmbootstrap.cfg
+          echo "=== Config dosyası içeriği ==="
+          cat ~/.config/pmbootstrap.cfg
+          echo "=============================="
+
+      - name: Config doğrulaması
+        run: |
+          echo "Cihaz: $(pmbootstrap config device)"
+          echo "UI: $(pmbootstrap config ui)"
+          echo "Channel: $(pmbootstrap config channel)"
+          echo "Build default device arch: $(pmbootstrap config build_default_device_arch)"
 
       - name: pmbootstrap init
         run: |
-          yes "" | pmbootstrap init || true
+          yes "" | pmbootstrap -y init
+
+      - name: Init sonrası config doğrulaması
+        run: |
+          echo "=== Init sonrası config ==="
+          echo "Cihaz: $(pmbootstrap config device)"
+          echo "UI: $(pmbootstrap config ui)"
+          echo "Channel: $(pmbootstrap config channel)"
+          cat ~/.config/pmbootstrap.cfg
+          echo "============================"
+
+          # Eğer init cihazı değiştirdiyse zorla geri ayarla
+          CURRENT_DEVICE=$(pmbootstrap config device)
+          if [ "$CURRENT_DEVICE" != "samsung-kylepro" ]; then
+            echo "UYARI: Cihaz değişmiş! Düzeltiliyor..."
+            pmbootstrap config device samsung-kylepro
+            pmbootstrap config ui console
+            pmbootstrap config channel edge
+          fi
 
       - name: Cihaz paketlerini derle
         run: |
-          pmbootstrap build device-samsung-kylepro --force || true
-          pmbootstrap build linux-samsung-kylepro --force || true
+          pmbootstrap build device-samsung-kylepro --arch=armv7 --force || true
+          pmbootstrap build linux-samsung-kylepro --arch=armv7 --force || true
 
       - name: postmarketOS imajını oluştur
         run: |
           yes "${{ env.PMOS_PASSWORD }}" | pmbootstrap install
+
+      - name: İmaj dosyalarını kontrol et
+        run: |
+          echo "=== Work dizinindeki imajlar ==="
+          find ~/pmbootstrap_work -name "*.img" -o -name "*.img.gz" 2>/dev/null | head -20
+          echo ""
+          echo "=== file komutu ile mimari kontrolü ==="
+          for img in $(find ~/pmbootstrap_work -name "*.img" 2>/dev/null | head -5); do
+            echo "$img:"
+            file "$img"
+            echo ""
+          done
 
       - name: İmaj dosyalarını dışa aktar
         run: |
           mkdir -p output
           pmbootstrap export output/
           ls -lah output/
+
+          echo "=== Dışa aktarılan dosyaların mimari kontrolü ==="
+          for img in output/*.img*; do
+            if [ -f "$img" ]; then
+              echo "$img:"
+              file "$img"
+            fi
+          done
 
       - name: Artifact yükle
         uses: actions/upload-artifact@v4
@@ -92,8 +140,17 @@ jobs:
       - name: Derleme özeti
         if: always()
         run: |
+          echo "========================================="
           echo "Cihaz: Samsung Galaxy Trend Plus (kylepro)"
           echo "Kanal: ${{ env.PMOS_CHANNEL }}"
           echo "Arayüz: ${{ env.PMOS_UI }}"
+          echo "========================================="
+          echo ""
+          echo "Son config durumu:"
+          pmbootstrap config device 2>/dev/null || true
+          echo ""
+          echo "Oluşturulan dosyalar:"
           ls -lah output/ 2>/dev/null || echo "Dosya bulunamadı"
+          echo ""
+          echo "Disk kullanımı:"
           df -h
