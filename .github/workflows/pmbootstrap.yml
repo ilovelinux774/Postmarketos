@@ -1,4 +1,3 @@
-# .github/workflows/pmos-build.yml
 name: postmarketOS Build - Samsung Galaxy Trend Plus (kylepro)
 
 on:
@@ -22,74 +21,66 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Disk alanını genişlet
+      - name: Disk alanini genislet
         run: |
           sudo rm -rf /usr/share/dotnet
           sudo rm -rf /usr/local/lib/android
           sudo rm -rf /opt/hostedtoolcache
           df -h
 
-      - name: pmbootstrap kur (git clone)
+      - name: pmbootstrap kur
         run: |
           git clone --depth=1 https://gitlab.postmarketos.org/postmarketOS/pmbootstrap.git ~/pmbootstrap-tool
           mkdir -p ~/.local/bin
           ln -sf ~/pmbootstrap-tool/pmbootstrap.py ~/.local/bin/pmbootstrap
           echo "$HOME/.local/bin" >> $GITHUB_PATH
 
-      - name: pmbootstrap sürüm kontrolü
+      - name: pmbootstrap surum kontrolu
         run: pmbootstrap --version
 
       - name: pmbootstrap config ayarla
         run: |
           mkdir -p ~/.config
           mkdir -p ~/pmbootstrap_work
-
-          # Config dosyasını girintisiz yaz (heredoc ile)
-          cat > ~/.config/pmbootstrap.cfg << 'ENDOFCONFIG'
-[pmbootstrap]
-build_default_device_arch = True
-boot_size = 256
-channel = edge
-device = samsung-kylepro
-extra_space = 0
-hostname = samsung-kylepro
-is_default_channel = False
-jobs = 4
-locale = en_US.UTF-8
-ssh_keys = False
-ui = console
-user = user
-work = /home/runner/pmbootstrap_work
-ENDOFCONFIG
-
-          echo "=== Config dosyası içeriği ==="
+          printf '%s\n' \
+            "[pmbootstrap]" \
+            "build_default_device_arch = True" \
+            "boot_size = 256" \
+            "channel = edge" \
+            "device = samsung-kylepro" \
+            "extra_space = 0" \
+            "hostname = samsung-kylepro" \
+            "is_default_channel = False" \
+            "jobs = 4" \
+            "locale = en_US.UTF-8" \
+            "ssh_keys = False" \
+            "ui = console" \
+            "user = user" \
+            "work = /home/runner/pmbootstrap_work" \
+            > ~/.config/pmbootstrap.cfg
+          echo "=== Config dosyasi ==="
           cat ~/.config/pmbootstrap.cfg
-          echo "=============================="
+          echo "======================"
 
-      - name: Config doğrulaması
+      - name: Config dogrulamasi
         run: |
           echo "Cihaz: $(pmbootstrap config device)"
           echo "UI: $(pmbootstrap config ui)"
           echo "Channel: $(pmbootstrap config channel)"
-          echo "Build default device arch: $(pmbootstrap config build_default_device_arch)"
 
       - name: pmbootstrap init
         run: |
           yes "" | pmbootstrap -y init
 
-      - name: Init sonrası config doğrulaması
+      - name: Init sonrasi config dogrulamasi
         run: |
-          echo "=== Init sonrası config ==="
+          echo "=== Init sonrasi config ==="
           echo "Cihaz: $(pmbootstrap config device)"
           echo "UI: $(pmbootstrap config ui)"
           echo "Channel: $(pmbootstrap config channel)"
-          cat ~/.config/pmbootstrap.cfg
-          echo "============================"
-
-          # Eğer init cihazı değiştirdiyse zorla geri ayarla
           CURRENT_DEVICE=$(pmbootstrap config device)
           if [ "$CURRENT_DEVICE" != "samsung-kylepro" ]; then
-            echo "UYARI: Cihaz değişmiş! Düzeltiliyor..."
+            echo "UYARI: Cihaz degismis! Duzeltiliyor..."
             pmbootstrap config device samsung-kylepro
             pmbootstrap config ui console
             pmbootstrap config channel edge
@@ -100,29 +91,27 @@ ENDOFCONFIG
           pmbootstrap build device-samsung-kylepro --arch=armv7 --force || true
           pmbootstrap build linux-samsung-kylepro --arch=armv7 --force || true
 
-      - name: postmarketOS imajını oluştur
+      - name: postmarketOS imajini olustur
         run: |
           yes "${{ env.PMOS_PASSWORD }}" | pmbootstrap install
 
-      - name: İmaj dosyalarını kontrol et
+      - name: Imaj dosyalarini kontrol et
         run: |
           echo "=== Work dizinindeki imajlar ==="
           find ~/pmbootstrap_work -name "*.img" -o -name "*.img.gz" 2>/dev/null | head -20
           echo ""
-          echo "=== file komutu ile mimari kontrolü ==="
+          echo "=== Mimari kontrolu ==="
           for img in $(find ~/pmbootstrap_work -name "*.img" 2>/dev/null | head -5); do
             echo "$img:"
             file "$img"
-            echo ""
           done
 
-      - name: İmaj dosyalarını dışa aktar
+      - name: Imaj dosyalarini disa aktar
         run: |
           mkdir -p output
           pmbootstrap export output/
           ls -lah output/
-
-          echo "=== Dışa aktarılan dosyaların mimari kontrolü ==="
+          echo "=== Disa aktarilan dosyalarin mimari kontrolu ==="
           for img in output/*.img*; do
             if [ -f "$img" ]; then
               echo "$img:"
@@ -130,27 +119,25 @@ ENDOFCONFIG
             fi
           done
 
-      - name: Artifact yükle
+      - name: Artifact yukle
         uses: actions/upload-artifact@v4
         with:
           name: postmarketos-samsung-kylepro-${{ github.run_number }}
           path: output/
           retention-days: 14
 
-      - name: Derleme özeti
+      - name: Derleme ozeti
         if: always()
         run: |
           echo "========================================="
           echo "Cihaz: Samsung Galaxy Trend Plus (kylepro)"
           echo "Kanal: ${{ env.PMOS_CHANNEL }}"
-          echo "Arayüz: ${{ env.PMOS_UI }}"
+          echo "Arayuz: ${{ env.PMOS_UI }}"
           echo "========================================="
-          echo ""
-          echo "Son config durumu:"
           pmbootstrap config device 2>/dev/null || true
           echo ""
-          echo "Oluşturulan dosyalar:"
-          ls -lah output/ 2>/dev/null || echo "Dosya bulunamadı"
+          echo "Olusturulan dosyalar:"
+          ls -lah output/ 2>/dev/null || echo "Dosya bulunamadi"
           echo ""
-          echo "Disk kullanımı:"
+          echo "Disk kullanimi:"
           df -h
